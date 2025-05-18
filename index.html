@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script src="index.js"></script>
+    <title>我的个人博客</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <p>帖子</p>
+            |
+            <p>项目</p>
+            |
+            <p>个人介绍</p>
+            |
+            <p>推荐工具</p>
+        </nav>
+    </header>
+    <main>
+        <img src="img/background.jpeg">
+        <div class="content-container">
+            <div class="left-nav" id="leftNav">
+                <h2>最新帖子</h2>
+                <ul>
+                    <li>如何理解观察者模式</li>
+                    <li>Node.js教程</li>
+                    <li>C语言泛型测试</li>
+                    <li>C#学习笔记</li>
+                </ul>
+            </div>
+            <div class="post-content">
+                <h1>C语言泛型实现</h1>
+                <p>在 C 语言中，由于它是一个静态类型、非面向对象的语言，没有内建的泛型（Generics）机制，
+                    不像 C++ 有模板、Java 有泛型类型。
+                    不过，我们可以通过一些“技巧”来实现类似泛型的行为，常见的做法包括：
+                </p>
+                <h2>🧰 实现 C 语言泛型的常见方式</h2>
+                <h3>1. 使用 void* 指针</h3>
+                这是最通用的做法。你可以通过 void* 来传递任意类型的指针，实现“类型无关”的容器。
+                <p>示例：通用交换函数</p>
+                <blockquote>
+                    <pre class="code">
+                void swap(void* a, void* b, size_t size) {
+                    char tmp[size];
+                    memcpy(tmp, a, size);
+                    memcpy(a, b, size);
+                    memcpy(b, tmp, size);
+                }
+                    </pre>
+
+                </blockquote>
+
+                <p>使用：</p>
+                <blockquote>
+                    <pre class="code">
+                int x = 1, y = 2;
+                swap(&x, &y, sizeof(int));
+                double a = 1.0, b = 2.0;
+                swap(&a, &b, sizeof(double));
+                    </pre>
+                </blockquote>
+                
+                <h3>2. 使用宏（宏模板）</h3>
+                C 语言预处理器（#define）可以用来生成不同类型的代码。
+                <p>示例：泛型栈（Macro 实现）</p>
+                <blockquote>
+                    <pre class="code">
+            #define DEFINE_STACK(type, name) \
+            typedef struct { \
+                type* data; \
+                int size; \
+                int capacity; \
+            } name##_stack; \
+            void name##_push(name##_stack* s, type value) { \
+                if (s->size == s->capacity) { \
+                s->capacity = s->capacity ? s->capacity * 2 : 4; \
+                s->data = realloc(s->data, s->capacity * sizeof(type)); \
+                } \
+                s->data[s->size++] = value; \
+            } \
+            type name##_pop(name##_stack* s) { \
+                return s->data[--s->size]; \
+            }
+                    </pre>
+                </blockquote>
+                
+                <p>使用：</p>
+                <blockquote>
+                    <pre class="code">
+            DEFINE_STACK(int, int)
+            DEFINE_STACK(double, double)
+
+            int_stack s = {0};
+            int_push(&s, 10);
+            int_push(&s, 20);
+            printf("%d\n", int_pop(&s));
+                    </pre>
+                </blockquote>
+                <h3>3. _Generic（C11 特性）</h3>
+                这是 C11 引入的一个真正意义上的泛型机制（但局限性较大），可以根据类型做重载。
+                <p>示例：类型重载的打印函数</p>
+                <blockquote>
+                    <pre class="code">
+                #include &lt;stdio.h&gt;
+
+                #define print(x) _Generic((x), \
+                    int: print_int, \
+                    double: print_double \
+                )(x)
+
+                void print_int(int x) {
+                    printf("int: %d\n", x);
+                }
+
+                void print_double(double x) {
+                    printf("double: %f\n", x);
+                }        
+                    </pre>
+                </blockquote>
+                
+                <p>使用：</p>
+                <pre class="code">
+                print(42); //<em>输出：int: 42</em>
+                print(3.14); //<em>输出：double: 3.140000</em>   
+                </pre>
+                
+                <h3>📌 总结：各种方式对比</h3>
+                <table>
+                    <tr>
+                        <th><h3>方法</h3></th>
+                        <th><h3>优点</h3></th>
+                        <th><h3>缺点</h3></th>
+                    </tr>
+                    <tr>
+                        <td>void*</td>
+                        <td>通用性强，运行时灵活</td>
+                        <td>失去类型安全，容易出错</td>
+                    </tr>
+                    <tr>
+                        <td>宏</td>
+                        <td>编译时展开，性能好</td>
+                        <td>代码难读，调试困难</td>
+                    </tr>
+                    <tr>
+                        <td>_Generic</td>
+                        <td>类型安全，适合函数重载</td>
+                        <td>不支持动态类型、不支持结构体</td>
+                    </tr>
+                </table>
+                <h3>🔧 实践建议</h3>
+                <p>若你在写容器（如链表、栈、队列等）→ 推荐用宏或 void*。</p>
+                <p>若你只需要实现几个函数的类型重载 → _Generic 更简单。</p>
+                <p>若项目很复杂，可以考虑使用一些现成的宏泛型库，如 STC (C99 STL-like) 或 klib.</p>
+            </div>
+        </div>
+        <button id="nav-button" onclick="goTop()">
+            <h1>^</h1>
+        </button>
+
+    </main>
+</body>
+
+</html>
